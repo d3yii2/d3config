@@ -31,11 +31,36 @@ class D3ConfigModel extends Model
         ];
     }
 
-    public static function findAllComponents(): array
+    public static function findAllComponents(array $accessList): array
     {
+        if (!$accessList) {
+            return [];
+        }
+
         $models = [];
         foreach (Yii::$app->components as $componentName => $component) {
-
+            /**
+             * check access
+             */
+            $hasAccess = false;
+            foreach ($accessList as $access) {
+                $components = [];
+                foreach ($access['components'] as $cKey => $cName){
+                    if (is_array($cName)) {
+                        $components[] = $cKey;
+                        continue;
+                    }
+                    $components[] = $cName;
+                }
+                $hasAccess = in_array('*', $components, true)
+                  || in_array($componentName, $components, true);
+                if ($hasAccess) {
+                    break;
+                }
+            }
+            if (!$hasAccess) {
+                continue;
+            }
             $model = new self([
                 'name' => $componentName,
             ]);

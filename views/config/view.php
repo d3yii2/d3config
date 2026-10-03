@@ -1,9 +1,11 @@
 <?php
 
+use cornernote\returnurl\ReturnUrl;
 use d3system\yii2\web\D3SystemView;
 use d3yii2\d3config\models\D3ConfigModel;
 use eaBlankonThema\assetbundles\layout\LayoutAsset;
 use eaBlankonThema\widget\ThAlertList;
+use eaBlankonThema\widget\ThButton;
 use eaBlankonThema\widget\ThDetailView;
 use eaBlankonThema\widget\ThReturnButton;
 use yii\helpers\VarDumper;
@@ -14,6 +16,8 @@ LayoutAsset::register($this);
  * @var D3SystemView $this
  * @var D3ConfigModel $model
  * @var object $component
+ * @var array $viewSettings
+ * @var array $updateSettings
  */
 
 $this->title = 'Config "'
@@ -38,6 +42,7 @@ echo ThDetailView::widget([
     ],
 ]);
 $this->endBlock();
+$ru = ReturnUrl::getToken();
 ?>
 <div class="row">
     <?= ThAlertList::widget() ?>
@@ -59,7 +64,25 @@ $this->endBlock();
             $reflection = new ReflectionClass($component);
             foreach ($reflection->getProperties(ReflectionProperty::IS_PUBLIC) as $property) {
                 $name = $property->getName();
+                if ($viewSettings !== '*' && !in_array($name, $viewSettings, true)) {
+                    continue;
+                }
+                $canEdit = $updateSettings === '*' || in_array($name, $updateSettings, true);
                 $value = $property->getValue($component);
+                $button = '';
+                if ($canEdit) {
+                    $button = ThButton::widget([
+                        'icon' => ThButton::ICON_PENCIL,
+                        'type' => ThButton::TYPE_PRIMARY,
+                        'size' => ThButton::SIZE_XSMALL,
+                        'link' => [
+                            'update',
+                            'componentName' => $model->name,
+                            'settingName' => $name,
+                            'ru' => $ru
+                        ]
+                    ]);
+                }
                 $comment = $property->getDocComment();
                 $fixedComment = [];
                 foreach (explode("\n", $comment) as $line) {
@@ -73,7 +96,7 @@ $this->endBlock();
                 ?>
                 <tr>
                     <td class="text-left"><?= $name ?></td>
-                    <td class="text-left"><?= VarDumper::dumpAsString($value, 10, true) ?></td>
+                    <td class="text-left"><?= VarDumper::dumpAsString($value, 10, true) ?><?=$button?></td>
                     <td class="text-left">
                         <pre class="text-left"><?= implode("\n", $fixedComment) ?></pre>
                     </td>
